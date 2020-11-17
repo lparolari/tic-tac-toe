@@ -1,4 +1,4 @@
-import { switchPlayer } from "../game";
+import { getPlayer } from "../game";
 import { width, height } from "../size";
 
 describe("game board", () => {
@@ -7,9 +7,7 @@ describe("game board", () => {
   });
 
   test("switch from p1=0 to p2=1", () => {
-    expect(switchPlayer(0)).toEqual(1);
-    expect(switchPlayer(1)).toEqual(0);
-    expect(switchPlayer(2)).toEqual(1);
-    expect(switchPlayer(3)).toEqual(0);
+    expect(getPlayer(0)).toEqual("X");
+    expect(getPlayer(1)).toEqual("O");
   });
 });

@@ -1,56 +1,52 @@
-import { height, width } from "./size";
-import { delta } from "./delta";
+import * as Engine from "./engine";
+import * as Game from "./game";
+import * as Controls from "./controls";
 
-const canvas = <HTMLCanvasElement>document.getElementById("myCanvas");
-const ctx = canvas.getContext("2d");
+Engine.setup();
 
-type LineOptions = { strokeStyle: string };
-type Point = { x: number; y: number }; // Example: { x: 100, y: 0 }
+var time = Game.t;
+var board = Game.board;
+var contunue = true;
+var winner = "NONE";
 
-function makePoint(x: number, y: number): Point {
-  return { x: x, y: y };
+function reset() {
+  time = Game.t;
+  board = Game.board;
+  contunue = true;
+  winner = "NONE";
+  Engine.setup();
 }
 
-function line(p1: Point, p2: Point, options: LineOptions) {
-  ctx.strokeStyle = options.strokeStyle;
-  ctx.beginPath();
-  ctx.moveTo(p1.x, p1.y);
-  ctx.lineTo(p2.x, p2.y);
-  ctx.stroke();
+function handleClick(ev: MouseEvent) {
+  if (!contunue) return;
+
+  const point = Engine.getMousePosition(ev);
+  const position = Engine.cell(point);
+
+  const player = Game.getPlayer(time);
+
+  if (Game.checkEmpty(board, position)) {
+    board = Game.takeUp(board, player, position);
+    Engine.takeUp(point, player);
+    time = Game.incTime(time);
+  }
+
+  if (Game.checkWinner(board, Game.P1)) {
+    winner = Game.P2;
+    contunue = false;
+  }
+  if (Game.checkWinner(board, Game.P2)) {
+    winner = Game.P2;
+    contunue = false;
+  }
+
+  if (!contunue) showWinner();
 }
 
-function arc(c: Point) {
-  ctx.beginPath();
-  ctx.arc(c.x, c.y, (100 - 20) / 2, 0, 2 * Math.PI);
-  ctx.stroke();
+function showWinner() {
+  alert("The winner is " + winner);
 }
 
-function cross(p: Point) {
-  const dx = delta(p.x);
-  const dy = delta(p.y);
+Engine.addOnClick(handleClick);
 
-  line(makePoint(10 + dx, 10 + dy), makePoint(90 + dx, 90 + dy), lineOpt);
-  line(makePoint(90 + dx, 10 + dy), makePoint(10 + dx, 90 + dy), lineOpt);
-}
-
-// Fun fact: nought is an alternative word for 0
-// (https://en.wikipedia.org/wiki/Nought)
-
-function nought(p: Point) {
-  const dx = delta(p.x);
-  const dy = delta(p.y);
-
-  arc(makePoint(50 + dx, 50 + dy));
-}
-
-const lineOpt: LineOptions = { strokeStyle: "#fff" };
-
-line(makePoint(100, 0), makePoint(100, height), lineOpt);
-line(makePoint(200, 0), makePoint(200, height), lineOpt);
-line(makePoint(0, 100), makePoint(width, 100), lineOpt);
-line(makePoint(0, 200), makePoint(width, 200), lineOpt);
-
-// Some example draws
-cross(makePoint(152, 287));
-nought(makePoint(180, 150));
-nought(makePoint(15, 150));
+Controls.playAgainBtn.onclick = reset;
