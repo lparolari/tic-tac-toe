@@ -1,16 +1,35 @@
 import { height, width } from "./size";
 import { delta } from "./delta";
+import { Board, checkWinner, fresh, isCellBusy, set } from "./game";
 
-const canvas = <HTMLCanvasElement>document.getElementById("myCanvas");
-const ctx = canvas.getContext("2d");
+type Canvas = HTMLCanvasElement;
+type Ctx = CanvasRenderingContext2D;
 
 type LineOptions = { strokeStyle: string };
-type Point = { x: number; y: number }; // Example: { x: 100, y: 0 }
+type Point = { x: number; y: number };
 
+type Player = "X" | "O";
+
+const canvas: Canvas = <HTMLCanvasElement>document.getElementById("myCanvas");
+const ctx: Ctx = canvas.getContext("2d");
+
+const lineOpt: LineOptions = { strokeStyle: "#fff" };
+
+// Stato del gioco
+let player: Player = "X";
+let board: Board = fresh;
+
+/** Costruisce un punto date le coord `x` e `y`. */
 function makePoint(x: number, y: number): Point {
   return { x: x, y: y };
 }
 
+/** Switcha il giocatore. */
+function getNextPlayer(player: Player): Player {
+  return player === "X" ? "O" : "X";
+}
+
+/** Crea linee da `p1` a `p2`. */
 function line(p1: Point, p2: Point, options: LineOptions) {
   ctx.strokeStyle = options.strokeStyle;
   ctx.beginPath();
@@ -19,12 +38,17 @@ function line(p1: Point, p2: Point, options: LineOptions) {
   ctx.stroke();
 }
 
-function arc(c: Point) {
+/** Crea cerchi di raggio 40 centrati in `c`. */
+function circle(c: Point) {
   ctx.beginPath();
   ctx.arc(c.x, c.y, (100 - 20) / 2, 0, 2 * Math.PI);
   ctx.stroke();
 }
 
+/**
+ * Disegna sul canvas un simbolo per il giocatore X
+ * per la casella associata al punto `p`.
+ */
 function cross(p: Point) {
   const dx = delta(p.x);
   const dy = delta(p.y);
@@ -33,24 +57,75 @@ function cross(p: Point) {
   line(makePoint(90 + dx, 10 + dy), makePoint(10 + dx, 90 + dy), lineOpt);
 }
 
-// Fun fact: nought is an alternative word for 0
-// (https://en.wikipedia.org/wiki/Nought)
-
+/**
+ * Disegna sul canvas un simbolo per il giocatore O
+ * per la casella associata al punto `p`.
+ */
 function nought(p: Point) {
   const dx = delta(p.x);
   const dy = delta(p.y);
 
-  arc(makePoint(50 + dx, 50 + dy));
+  circle(makePoint(50 + dx, 50 + dy));
 }
 
-const lineOpt: LineOptions = { strokeStyle: "#fff" };
+/** Restituisce le coordinate del mouse relative al canvas. */
+function getMousePosition(canvas: Canvas, event) {
+  // Ottiene le proprietà sul rettangolo del canvas
+  const rect = canvas.getBoundingClientRect();
 
+  // Trasla le coordinate assolute del mouse `envent.clientX`,
+  // `event.clientY` in coordinate che stanno all'interno del canvas.
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+
+  return makePoint(x, y);
+}
+
+/** Gestisce l'evento `mousedown` del canvas. */
+function handlePlayerClick(e: MouseEvent) {
+  // Passo dalle coordinate della grafica alle coordinate del modello.
+  const p = getMousePosition(canvas, e);
+
+  const i = Math.floor(delta(p.y) / 100);
+  const j = Math.floor(delta(p.x) / 100);
+
+  // Proibisco all'utente di fare "danni" se sulla board c'è un vincitore.
+  // La check winner in questo caso non viene utilizzata per
+  // vedere chi ha vinto, ma solo per bloccare altre azioni dell'utente.
+  if (checkWinner(board, "O") || checkWinner(board, "X")) return;
+
+  // Proibisco all'utente di inserire il proprio valore su una cella
+  // se quella ha già una X o una O al suo interno.
+  if (!isCellBusy(board, i, j)) {
+    if (player === "X") cross(p);
+    else nought(p);
+
+    board = set(board, i, j, player);
+
+    player = getNextPlayer(player);
+  }
+
+  // Controllo e notifico della vincita sulla console appena dopo la
+  // mossa di uno dei due giocatori.
+
+  if (checkWinner(board, "X")) {
+    console.log("Ha vinto X!");
+    return;
+  }
+
+  if (checkWinner(board, "O")) {
+    console.log("Ha vinto O!");
+    return;
+  }
+}
+
+// "MAIN"
+
+// Aggiungo l'handler per l'evento `mousedown`.
+canvas.addEventListener("mousedown", handlePlayerClick);
+
+// Disegna la griglia
 line(makePoint(100, 0), makePoint(100, height), lineOpt);
 line(makePoint(200, 0), makePoint(200, height), lineOpt);
 line(makePoint(0, 100), makePoint(width, 100), lineOpt);
 line(makePoint(0, 200), makePoint(width, 200), lineOpt);
-
-// Some example draws
-cross(makePoint(152, 287));
-nought(makePoint(180, 150));
-nought(makePoint(15, 150));
